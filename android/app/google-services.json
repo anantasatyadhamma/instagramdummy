@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "563689027873",
+    "project_id": "instadummy-2bf98",
+    "storage_bucket": "instadummy-2bf98.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:563689027873:android:48fa96368e323eb4172660",
+        "android_client_info": {
+          "package_name": "com.instagramdummy"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "563689027873-j0kk8asonnj64kjanbj9bfskkkouiuh5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAMeUJ2B5A7lwpicEjfjGbyKHI_Wi4MwBU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "563689027873-j0kk8asonnj64kjanbj9bfskkkouiuh5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
