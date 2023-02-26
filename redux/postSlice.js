@@ -29,11 +29,26 @@ const postSlice = createSlice({
       item.user_has_liked = true;
   
       state.modifiedTime = new Date().getTime();
+      console.log('like', state.modifiedTime);
+    },
+    dislikePost: (state, action) => {
+      const item = state.posts.find(item => item.id === action.payload);
+      item.likes = item.likes - 1;
+      item.user_has_liked = false;
+  
+      state.modifiedTime = new Date().getTime();
+      console.log('dislike', state.modifiedTime);
     },
     commentPost: (state, action) => {
       let item = state.posts.find(item => item.id === action.payload.id);
-      let comments = [...item.comments, action.payload.userComment];
+      let comments = [];
 
+      Object.values(item.comments).forEach(e => {
+        comments.push(e);
+      });
+
+      comments.push(action.payload.userComment);
+      
       item.comments = comments;
 
       state.modifiedTime = new Date().getTime();
@@ -46,6 +61,7 @@ const {actions, reducer} = postSlice;
 export const {
   addPost,
   likePost,
+  dislikePost,
   commentPost,
   addToBookmark,
   removeBookmark

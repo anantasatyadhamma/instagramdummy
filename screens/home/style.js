@@ -107,6 +107,9 @@ const styles = StyleSheet.create({
     color: BLACK,
     marginHorizontal: PADDING_APP,
   },
+  indicatorSend: {
+    width: widthPercentage(5),
+  },
 
   // notification
   divider: {

@@ -1,8 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  forwardRef,
-} from 'react';
+import React, {useState, useEffect, forwardRef} from 'react';
 import {
   View,
   Text,
@@ -11,15 +7,14 @@ import {
   TextInput,
   ToastAndroid,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import styles from './style';
 import {Avatar, Icon} from '@rneui/themed';
 import {Image} from '@rneui/base';
 import LinearGradient from 'react-native-linear-gradient';
 import axios from 'axios';
-import {
-  GestureHandlerRootView,
-} from 'react-native-gesture-handler';
+import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import 'react-native-get-random-values';
 import {nanoid} from 'nanoid';
 import {formatDistanceToNow} from 'date-fns';
@@ -50,48 +45,10 @@ import {
   addPost,
   addToBookmark,
   removeBookmark,
+  dislikePost,
 } from '../../redux/postSlice';
-
-const {width, height} = Dimensions.get('window');
-
-const stories = [
-  {
-    username: 'itsgoodman',
-    stories: `https://picsum.photos/${width}/${height}?random=30`,
-    profil_picture: `https://randomuser.me/api/portraits/men/12.jpg`,
-    id: 0,
-  },
-  {
-    username: 'samofficial',
-    stories: `https://picsum.photos/${width}/${height}?random=12`,
-    profil_picture: `https://randomuser.me/api/portraits/men/60.jpg`,
-    id: 1,
-  },
-  {
-    username: 'thisisjohn',
-    stories: `https://picsum.photos/${width}/${height}?random=100`,
-    profil_picture: `https://randomuser.me/api/portraits/men/4.jpg`,
-    id: 2,
-  },
-  {
-    username: 'mike',
-    stories: `https://picsum.photos/${width}/${height}?random=151`,
-    profil_picture: `https://randomuser.me/api/portraits/men/8.jpg`,
-    id: 3,
-  },
-  {
-    username: 'tommy',
-    stories: `https://picsum.photos/${width}/${height}?random=123`,
-    profil_picture: `https://randomuser.me/api/portraits/men/1.jpg`,
-    id: 4,
-  },
-  {
-    username: 'therealdavid',
-    stories: `https://picsum.photos/${width}/${height}?random=67`,
-    profil_picture: `https://randomuser.me/api/portraits/men/55.jpg`,
-    id: 5,
-  },
-];
+import {addNotification} from '../../redux/notificationSlice';
+import {addUser} from '../../redux/userSlice';
 
 function StoriesElement(props) {
   return (
@@ -160,7 +117,12 @@ function NotificationModal(props) {
 const PostElement = forwardRef((props, ref) => {
   const data = props.data;
   let comments = props.data.comments;
-  let sortComments = [...comments];
+  let sortComments = [];
+
+  Object.values(comments).forEach(e => {
+    sortComments.push(e);
+  });
+
   sortComments.sort(
     (a, b) =>
       new Date(parseInt(b.created_time)) - new Date(parseInt(a.created_time)),
@@ -185,15 +147,15 @@ const PostElement = forwardRef((props, ref) => {
             size={25}
             rounded
             containerStyle={{backgroundColor: PRIMARY}}
-            source={{uri: data.user.profile_picture_new}}
+            source={{uri: data.type === 'search' ? data.profile_picture : data.user.profile_picture}}
           />
-          <Text style={styles.textUsernamePost}>{data.user.username}</Text>
+          <Text style={styles.textUsernamePost}>{data.type === 'search' ? data.username : data.user.username}</Text>
         </View>
       </View>
       <View>
         <Image
           source={{
-            uri: data.images.image,
+            uri: data.type === 'search' ? data.image : data.images.standard_resolution.url,
           }}
           style={styles.imagePost}
           resizeMode="cover"
@@ -242,9 +204,9 @@ const PostElement = forwardRef((props, ref) => {
         </View>
       </View>
       <Text style={styles.likes}>{data.likes} likes</Text>
-      <Caption username={data.user.username} text={data.caption.text} />
+      <Caption username={data.type === 'search' ? data.username : data.user.username} text={data.type === 'search' ? data.caption : data.caption.text} />
       <Text style={styles.commentCount} onPress={props.navigateToDetail}>
-        See {comments.length} comments
+        See {sortComments.length} comments
       </Text>
       <FlatList
         data={listComments}
@@ -275,6 +237,12 @@ const PostElement = forwardRef((props, ref) => {
           onSubmitEditing={props.onSubmit}
           value={props.text}
         />
+        <ActivityIndicator
+          size={'small'}
+          color={PRIMARY}
+          style={styles.indicatorSend}
+          animating={props.loadingSend}
+        />
       </View>
       <Text style={styles.text_time}>{props.time}</Text>
     </View>
@@ -282,40 +250,116 @@ const PostElement = forwardRef((props, ref) => {
 });
 
 function Home(props) {
-  const [posts, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingSend, setLoadingSend] = useState(false);
   const [comment, setComment] = useState('');
   const [showStories, setShowStories] = useState(false);
   const [storyArr, setStoryArr] = useState([]);
+  const [stories, setStories] = useState([]);
   const [textSearch, setTextSearch] = useState('');
   const [showModalProfile, setShowModalProfile] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
 
   function commentPost(id) {
     if (comment !== '') {
-      const userComment = {
-        created_time: new Date().getTime(),
-        text: comment,
-        from: {
-          username: 'anan',
-          profile_picture: props.user.profile_picture,
-          id: '124156363',
-          full_name: 'Ananta',
-        },
-        id: nanoid(10),
-      };
+      setLoadingSend(true);
+      axios
+        .post(`https://dizzy-lime-tux.cyclic.app/add-comment`, {
+          postId: id,
+          textComment: comment,
+        })
+        .then(() => {
+          console.log('You have successfully commented on a post!');
 
-      const payload = {
-        id,
-        userComment,
-      };
+          const userComment = {
+            created_time: new Date().getTime(),
+            text: comment,
+            from: {
+              username: 'ananta',
+              profile_picture: props.user.profile_picture,
+              id: '124156363',
+              full_name: 'Ananta',
+            },
+            id: nanoid(10),
+          };
 
-      setComment('');
+          const payload = {
+            id,
+            userComment,
+          };
 
-      props.commentPost(payload);
+          props.commentPost(payload);
+
+          setComment('');
+          setLoadingSend(false);
+        })
+        .catch(error => {
+          console.log('error', error);
+          setLoadingSend(false);
+          ToastAndroid.show('Something went wrong!', ToastAndroid.LONG);
+        });
     } else {
       ToastAndroid.show('Please type something first!', ToastAndroid.SHORT);
     }
+  }
+
+  function likePost(id) {
+    props.likePost(id);
+    axios
+      .post(`https://dizzy-lime-tux.cyclic.app/like-post`, {
+        postId: id,
+      })
+      .then(() => {
+        console.log('You liked a post!');
+      })
+      .catch(error => {
+        console.log('error', error);
+        ToastAndroid.show('Something went wrong!', ToastAndroid.LONG);
+      });
+  }
+
+  function dislikePost(id) {
+    props.dislikePost(id);
+    axios
+      .post(`https://dizzy-lime-tux.cyclic.app/unlike-post`, {
+        postId: id,
+      })
+      .then(() => {
+        console.log('You unliked a post!');
+      })
+      .catch(error => {
+        console.log('error', error);
+        ToastAndroid.show('Something went wrong!', ToastAndroid.LONG);
+      });
+  }
+
+  function bookmarkPost(id) {
+    props.addToBookmark(id);
+    axios
+      .post(`https://dizzy-lime-tux.cyclic.app/bookmark-post`, {
+        postId: id,
+      })
+      .then(() => {
+        console.log('You bookmark a post!');
+      })
+      .catch(error => {
+        console.log('error', error);
+        ToastAndroid.show('Something went wrong!', ToastAndroid.LONG);
+      });
+  }
+  function disbookmarkPost(id) {
+    props.removeBookmark(id);
+    axios
+      .post(`https://dizzy-lime-tux.cyclic.app/disBookmark-post`, {
+        postId: id,
+      })
+      .then(() => {
+        console.log('You remove post from bookmark!');
+      })
+      .catch(error => {
+        console.log('error', error);
+        ToastAndroid.show('Something went wrong!', ToastAndroid.LONG);
+      });
   }
 
   function _showStories(id) {
@@ -331,13 +375,38 @@ function Home(props) {
   }
 
   function search() {
-    const posts = props.posts;
+    setLoading(true);
+    axios.post(`https://dizzy-lime-tux.cyclic.app/search`, {
+      username: textSearch.toLowerCase()
+    })
+    .then((result) => {
+      if(result.data.message === 'success!') {
+        let postsResult = [];
 
-    const result = posts.find(
-      item => item.user.username === textSearch.toLowerCase(),
-    );
-    props.addPost([result]);
-    setTextSearch('');
+        result.data.data.forEach(e => {
+          const element = {
+            ...e,
+            type: 'search'
+          }
+          postsResult.push(element);
+        });
+  
+        props.addPost(postsResult);
+        setTextSearch('');
+        setLoading(false);
+      } else {
+        setTextSearch('');
+        setLoading(false);
+        ToastAndroid.show('User not found', ToastAndroid.SHORT);
+      }
+
+      
+    })
+    .catch(error => {
+      setLoading(false);
+      console.log('error', error);
+      ToastAndroid.show('Something went wrong!', ToastAndroid.LONG);
+    });
   }
 
   function share(message, url) {
@@ -356,82 +425,70 @@ function Home(props) {
   }
 
   useEffect(() => {
-    // get posts
-    const fetchPosts = async () => {
+    const promises = new Promise(async (resolve, reject) => {
       await axios
-        .get(`https://api.jsonbin.io/v3/b/63bd23fe15ab31599e3290c1`)
+        .get(`https://dizzy-lime-tux.cyclic.app/get-posts`)
         .then(response => {
-          const data = response.data.record.data;
-          let dataPosts = [];
-          data.map(element => {
-            const numberPost = Math.floor(Math.random() * (90 - 1) + 1);
-            const likes = Math.floor(Math.random() * (200 - 1) + 1);
-            const data = {
-              ...element,
-              comments: [
-                {
-                  created_time: '1440501087',
-                  text: 'woow...! good',
-                  from: {
-                    username: 'itsgoodman',
-                    profile_picture: `https://randomuser.me/api/portraits/men/${numberPost}.jpg`,
-                    id: '1547627005',
-                    full_name: 'Good Man',
-                  },
-                  id: 0,
-                },
-                {
-                  created_time: '1440501087',
-                  text: 'its amazing...!',
-                  from: {
-                    username: 'jane',
-                    profile_picture: `https://randomuser.me/api/portraits/men/${numberPost}.jpg`,
-                    id: '1547627005',
-                    full_name: 'Jane',
-                  },
-                  id: 1,
-                },
-                {
-                  created_time: '1440501087',
-                  text: 'great! keep working...',
-                  from: {
-                    username: 'thisisjohn',
-                    profile_picture: `https://randomuser.me/api/portraits/men/${numberPost}.jpg`,
-                    id: '1547627005',
-                    full_name: 'John',
-                  },
-                  id: 2,
-                },
-              ],
-              images: {
-                ...element.images,
-                image: `https://picsum.photos/${width}/${height}?random=${numberPost}`,
-              },
-              user: {
-                ...element.user,
-                profile_picture_new: `https://randomuser.me/api/portraits/men/${numberPost}.jpg`,
-              },
-              likes,
-              bookmarked: false,
-            };
-            dataPosts.push(data);
-          });
-
-          if (posts === null) {
-            setPost(dataPosts);
-          }
-
-          props.addPost(dataPosts);
+          props.addPost(response.data.data);
 
           setLoading(false);
         })
         .catch(error => {
           setLoading(false);
-          return error.response.data;
+          console.log('error', error);
+          ToastAndroid.show('Something went wrong!', ToastAndroid.LONG);
         });
-    };
 
-    fetchPosts();
+      await axios
+        .get(`https://dizzy-lime-tux.cyclic.app/get-stories`)
+        .then(response => {
+          setStories(response.data.data);
+
+          setLoading(false);
+        })
+        .catch(error => {
+          setLoading(false);
+          console.log('error', error);
+          ToastAndroid.show('Something went wrong!', ToastAndroid.LONG);
+        });
+      
+      await axios.get(`https://dizzy-lime-tux.cyclic.app/get-notification`)
+        .then((result) => {
+          Object.values(result.data.data).forEach(e => {
+            props.addNotification(e);
+          })
+        })
+        .catch(error => {
+          setLoading(false);
+          console.log('error', error);
+          ToastAndroid.show('Something went wrong!', ToastAndroid.LONG);
+        })
+
+        await axios.get(`https://dizzy-lime-tux.cyclic.app/get-user-profile`)
+        .then((result) => {
+          const data = {
+            username: result.data.data.username,
+            profile_picture: result.data.data.userProfile
+          }
+
+          props.addUser(data);
+        })
+        .catch(error => {
+          setLoading(false);
+          console.log('error', error);
+          ToastAndroid.show('Something went wrong!', ToastAndroid.LONG);
+        })
+
+      resolve('success');
+    });
+
+    promises
+      .then(() => {
+        setLoading(false);
+      })
+      .catch(error => {
+        setLoading(false);
+      });
   }, []);
 
   if (loading) {
@@ -456,19 +513,25 @@ function Home(props) {
           renderItem={item => (
             <PostElement
               data={item.item}
-              likesPost={() => props.likePost(item.item.id)}
+              likesPost={() =>
+                item.item.user_has_liked
+                  ? dislikePost(item.item.id)
+                  : likePost(item.item.id)
+              }
               textComment={val => setComment(val)}
               onSubmit={() => commentPost(item.item.id)}
+              loadingSend={loadingSend}
               text={comment}
               navigateToDetail={() =>
                 props.navigation.navigate('DetailPost', {id: item.item.id})
               }
               time={formatDistanceToNow(parseInt(item.item.created_time))}
               savePost={() => {
-                if (item.item.bookmarked) {
-                  props.removeBookmark(item.item.id);
+                console.log('item bookmark', item.item.bookmarked)
+                if (!item.item.bookmarked) {
+                  bookmarkPost(item.item.id);
                 } else {
-                  props.addToBookmark(item.item.id);
+                  disbookmarkPost(item.item.id);
                 }
               }}
               profile_picture={props.user.profile_picture}
@@ -533,6 +596,8 @@ function Home(props) {
         <Profil
           isModalVisible={showModalProfile}
           closeModal={() => setShowModalProfile(false)}
+          username={props.user.username}
+          profile_picture={props.user.profile_picture}
         />
         <NotificationModal
           data={props.notification}
@@ -559,4 +624,7 @@ export default connect(mapStateToProps, {
   addPost,
   addToBookmark,
   removeBookmark,
+  addNotification,
+  dislikePost,
+  addUser
 })(Home);

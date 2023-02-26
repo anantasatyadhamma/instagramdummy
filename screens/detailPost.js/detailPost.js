@@ -1,10 +1,18 @@
 import React, {useEffect, useState} from 'react';
-import {View, FlatList, Text, ToastAndroid, TextInput} from 'react-native';
+import {
+  View,
+  FlatList,
+  Text,
+  ToastAndroid,
+  TextInput,
+  ActivityIndicator,
+} from 'react-native';
 import styles from './style';
 import {Avatar} from '@rneui/themed';
 import 'react-native-get-random-values';
-import { nanoid } from 'nanoid';
-import { formatDistanceToNow } from 'date-fns'
+import {nanoid} from 'nanoid';
+import {formatDistanceToNow} from 'date-fns';
+import axios from 'axios';
 
 // colors
 import {PRIMARY} from '../../config/color';
@@ -17,19 +25,13 @@ import Loading from '../../components/modal/Loading';
 // redux
 import {connect} from 'react-redux';
 import {State} from '../../redux/store';
-import {
- likePost,
- commentPost,
- addPost
-} from '../../redux/postSlice';
-
-
+import {likePost, commentPost, addPost} from '../../redux/postSlice';
 
 function HeaderComponentList(props) {
   return (
     <View>
       <Text style={styles.username}>
-        {props.username} 
+        {props.username}
         <Text style={styles.caption}> {props.caption}</Text>
       </Text>
       <Text style={styles.time}>{props.time}</Text>
@@ -42,65 +44,118 @@ function DetailPost(props) {
   const [comment, setComment] = useState('');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingSend, setLoadingSend] = useState(false);
   const [comments, setComments] = useState([]);
   const [postId, setPostId] = useState(null);
 
   function commentPost(id) {
-    if(comment !== "") {
-        const userComment = {
-        created_time: new Date().getTime(),
-        text: comment,
-        from: {
-          username: 'anan',
-          profile_picture: `https://randomuser.me/api/portraits/men/35.jpg`,
-          id: '124156363',
-          full_name: 'Ananta',
-        },
-        id: nanoid(10)
-      };
+    if (comment !== '') {
+      setLoadingSend(true);
+      axios
+        .post(`https://dizzy-lime-tux.cyclic.app/add-comment`, {
+          postId: id,
+          textComment: comment,
+        })
+        .then(() => {
+          console.log('You have successfully commented on a post!');
 
-      const payload = {
-        id,
-        userComment
-      }
+          const userComment = {
+            created_time: new Date().getTime(),
+            text: comment,
+            from: {
+              username: 'ananta',
+              profile_picture: props.user.profile_picture,
+              id: '124156363',
+              full_name: 'Ananta',
+            },
+            id: nanoid(10),
+          };
 
-      setComment("");
+          const payload = {
+            id,
+            userComment,
+          };
 
-      props.commentPost(payload);
+          props.commentPost(payload);
+
+          setComment('');
+          setLoadingSend(false);
+        })
+        .catch(error => {
+          console.log('error', error);
+          setLoadingSend(false);
+          ToastAndroid.show('Something went wrong!', ToastAndroid.LONG);
+        });
     } else {
-      ToastAndroid.show("Please type something first!", ToastAndroid.SHORT);
+      ToastAndroid.show('Please type something first!', ToastAndroid.SHORT);
     }
-    
   }
 
   useEffect(() => {
-    const { id } = props.route.params;
-    const data = props.posts.find(item => item.id === id);
-    setData(data);
+    const {id} = props.route.params;
+    console.log('id post', id);
+
+    const fetchDetailPost = async () => {
+      await axios
+        .post(
+          `https://dizzy-lime-tux.cyclic.app/get-detail-post`,
+          {
+            postId: id,
+          },
+          {},
+        )
+        .then(result => {
+          setData(result.data.data);
+
+          const listComment = result.data.data.comments;
+          let sortComments = [];
+
+          Object.values(listComment).forEach(e => {
+            sortComments.push(e);
+          });
+          sortComments.sort(
+            (a, b) =>
+              new Date(parseInt(b.created_time)) -
+              new Date(parseInt(a.created_time)),
+          );
+
+          setComments(sortComments);
+          setLoading(false);
+        })
+        .catch(error => {
+          console.log('error', error);
+          setLoading(false);
+        });
+    };
+
+    fetchDetailPost();
+
     setPostId(id);
-    setLoading(false);
-
-    const listComment = data.comments;
-    let sortComments = [...listComment];
-    sortComments.sort((a, b) => new Date(parseInt(b.created_time)) - new Date(parseInt(a.created_time)));
-    setComments(sortComments);
-
   }, [props.modified]);
 
-  if(data === null) {
+  if (data === null) {
     return <Loading isModalVisible={loading} />;
   }
 
   return (
     <View style={styles.container}>
-      <HeaderWithBack {...props} name="Comments"/>
+      <HeaderWithBack {...props} name="Comments" />
       <FlatList
         data={comments}
         extraData={props.modified}
-        renderItem={(item) => (
-          <CommentElement username={item.item.from.username} comment={item.item.text} />
+        renderItem={item => (
+          <CommentElement
+            username={item.item.from.username}
+            comment={item.item.text}
+          />
         )}
-        ListHeaderComponent={() => <HeaderComponentList username={data.user.username} caption={data.caption.text} time={formatDistanceToNow(parseInt(data.created_time))}/>}
+        ListHeaderComponent={() => (
+          <HeaderComponentList
+            username={data.user.username}
+            caption={data.caption.text}
+            time={formatDistanceToNow(parseInt(data.created_time))}
+          />
+        )}
         contentContainerStyle={styles.contentList}
         showsVerticalScrollIndicator={false}
       />
@@ -126,7 +181,18 @@ function DetailPost(props) {
             value={comment}
           />
         </View>
-        <Text style={styles.textSend} onPress={() => commentPost(postId)}>Send</Text>
+        {loadingSend ? (
+          <ActivityIndicator
+            size={'small'}
+            color={PRIMARY}
+            style={styles.indicatorSend}
+            animating={loadingSend}
+          />
+        ) : (
+          <Text style={styles.textSend} onPress={() => commentPost(postId)}>
+            Send
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -135,11 +201,11 @@ function DetailPost(props) {
 const mapStateToProps = (state = State) => ({
   posts: state.post.posts,
   modified: state.post.modifiedTime,
-  user: state.user.user
+  user: state.user.user,
 });
 
 export default connect(mapStateToProps, {
   likePost,
   commentPost,
-  addPost
+  addPost,
 })(DetailPost);

@@ -33,6 +33,9 @@ const styles = StyleSheet.create({
     fontSize: normalizeText(12),
     color: BLACK,
   },
+  indicatorSend: {
+    width: widthPercentage(5),
+  },
 
   // list comment
   contentList: {

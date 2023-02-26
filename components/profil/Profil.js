@@ -1,5 +1,4 @@
 import {Avatar, normalizeText} from '@rneui/base';
-import {Icon} from '@rneui/themed';
 import React from 'react';
 import {View, Text, StyleSheet} from 'react-native';
 import Modal from 'react-native-modal';
@@ -8,10 +7,6 @@ import {REGULAR} from '../../config/fonts';
 import {PADDING_APP, BORDER_CARD} from '../../config/style';
 import {heightPercentage, widthPercentage} from '../../utils/responsiveStyle';
 
-// redux
-import {connect} from 'react-redux';
-import {State} from '../../redux/store';
-import {changeUser} from '../../redux/userSlice';
 
 function Profil(props) {
   return (
@@ -34,9 +29,9 @@ function Profil(props) {
             size={47}
             rounded
             containerStyle={{backgroundColor: PRIMARY}}
-            source={{uri: props.user.profile_picture}}
+            source={{uri: props.profile_picture}}
           />
-          <Text style={styles.textUsername}>{props.user.username}</Text>
+          <Text style={styles.textUsername}>{props.username}</Text>
         </View>
       </View>
     </Modal>
@@ -70,8 +65,5 @@ const styles = StyleSheet.create({
   },
 });
 
-const mapStateToProps = (state = State) => ({
-  user: state.user.user,
-});
 
-export default connect(mapStateToProps, {})(Profil);
+export default Profil;

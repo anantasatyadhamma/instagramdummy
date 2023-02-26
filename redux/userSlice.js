@@ -4,21 +4,17 @@ import {createSlice} from '@reduxjs/toolkit';
 const userSlice = createSlice({
   name: 'user',
   initialState: {
-    user: {
-        name: "Ananta",
-        username: "ananta",
-        profile_picture: "https://randomuser.me/api/portraits/men/35.jpg"
-    }
+    user: {}
   },
   reducers: {
-    changeUser: (state, action) => {
-        console.log('this is just for dummy');
+    addUser: (state, action) => {
+      state.user = action.payload;
     }
   },
 });
 
 const {actions, reducer} = userSlice;
 
-export const {changeUser} = actions;
+export const {addUser} = actions;
 
 export default reducer;

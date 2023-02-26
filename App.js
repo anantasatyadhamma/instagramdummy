@@ -2,6 +2,7 @@ import React, {useEffect} from 'react';
 import {StatusBar} from 'react-native';
 import messaging from '@react-native-firebase/messaging';
 import notifee from '@notifee/react-native';
+import axios from 'axios';
 
 // redux
 import {Provider, connect} from 'react-redux';
@@ -94,6 +95,28 @@ function App(props) {
     });
   useEffect(() => {
     requestUserPermission();
+
+    const getDeviceToken = async () => {
+      await messaging().registerDeviceForRemoteMessages();
+      const token = await messaging().getToken();
+
+      axios
+        .post(
+          `https://dizzy-lime-tux.cyclic.app/add-token-fcm`,
+          {
+            tokenFCM: token,
+          },
+        )
+        .then(() => {
+          console.log('Successful store token to database!');
+        })
+        .catch(error => {
+          ToastAndroid.show('Something went wrong!', ToastAndroid.SHORT);
+        });
+    };
+
+    getDeviceToken();
+
     const unsubscribe = messaging().onMessage(async remoteMessage => {
       notifee.displayNotification({
         title: remoteMessage.notification.title,
