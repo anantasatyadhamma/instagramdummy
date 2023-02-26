@@ -16,4 +16,4 @@ Instagram dummy has the following features:
 
 This application is already connected to the database via an API call. Receive notifications every time a user likes a post.
 
-For back end see : [github repo](https://github.com/anantasatyadhamma/instagram-dummy-api)
+For backend see : [github repo](https://github.com/anantasatyadhamma/instagram-dummy-api)
